@@ -278,8 +278,10 @@ class CARTCalculatorV2:
         score += age_score
         
         # Systolic BP scoring
-        sbp = vitals.get('systolic_bp', 120)
-        if sbp >= 111:
+        sbp = vitals.get('systolic_bp')
+        if sbp is None or sbp != sbp:
+            sbp_score = 0
+        elif sbp >= 111:
             sbp_score = 0
         elif sbp >= 100:
             sbp_score = 1
@@ -292,8 +294,10 @@ class CARTCalculatorV2:
         score += sbp_score
         
         # Heart rate scoring
-        hr = vitals.get('heart_rate', 70)
-        if hr < 60:
+        hr = vitals.get('heart_rate')
+        if hr is None or hr != hr:
+            hr_score = 0
+        elif hr < 60:
             hr_score = 0
         elif hr < 100:
             hr_score = 1
@@ -306,8 +310,10 @@ class CARTCalculatorV2:
         score += hr_score
         
         # Respiratory rate scoring
-        rr = vitals.get('respiratory_rate', 14)
-        if rr < 14:
+        rr = vitals.get('respiratory_rate')
+        if rr is None or rr != rr:
+            rr_score = 0
+        elif rr < 14:
             rr_score = 0
         elif rr < 20:
             rr_score = 1
