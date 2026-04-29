@@ -91,7 +91,11 @@ class NEWS2CalculatorV2:
         
         # 1. Respiratory Rate (0-3)
         rr = vitals.get('respiratory_rate')
-        if rr is None or (isinstance(rr, float) and rr != rr):
+        try:
+            rr = float(rr) if rr is not None else None
+        except (ValueError, TypeError):
+            rr = None
+        if rr is None or rr != rr:
             components['respiratory_rate'] = 0  # Missing = skip
         elif rr <= 8:
             components['respiratory_rate'] = 3
@@ -129,7 +133,11 @@ class NEWS2CalculatorV2:
         
         # 3. Temperature (0-3)
         temp = vitals.get('temperature')
-        if temp is None or (isinstance(temp, float) and temp != temp):
+        try:
+            temp = float(temp) if temp is not None else None
+        except (ValueError, TypeError):
+            temp = None
+        if temp is None or temp != temp:
             components['temperature'] = 0  # Missing = skip
         elif temp <= 35.0:
             components['temperature'] = 3
@@ -144,7 +152,11 @@ class NEWS2CalculatorV2:
         
         # 4. Systolic Blood Pressure (0-3)
         sbp = vitals.get('systolic_bp')
-        if sbp is None or (isinstance(sbp, float) and sbp != sbp):
+        try:
+            sbp = float(sbp) if sbp is not None else None
+        except (ValueError, TypeError):
+            sbp = None
+        if sbp is None or sbp != sbp:
             components['systolic_bp'] = 0  # Missing = skip
         elif sbp <= 90:
             components['systolic_bp'] = 3
