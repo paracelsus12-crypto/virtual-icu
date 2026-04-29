@@ -609,6 +609,8 @@ with tab3:
         
         # Get vitals from data
         vitals = data.iloc[record_idx].to_dict()
+        import math
+        vitals = {k: (None if (isinstance(v, float) and math.isnan(v)) else v) for k, v in vitals.items()}
         
         # Ensure age is set
         if 'age' not in vitals or pd.isna(vitals['age']):
