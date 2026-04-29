@@ -640,7 +640,7 @@ with tab3:
         with col2:
             st.metric("🫁 SpO2", f"{vitals['spo2']:.1f}%")
         with col3:
-            st.metric("📉 SBP", f"{vitals['systolic_bp']:.0f} mmHg")
+            st.metric("📉 SBP", f"{vitals['systolic_bp']:.0f} mmHg" if vitals.get('systolic_bp') is not None else "nan mmHg")
         with col4:
             st.metric("🌬️ RR", f"{vitals['respiratory_rate']:.0f} /min")
         with col5:
