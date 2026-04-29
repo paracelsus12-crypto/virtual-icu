@@ -231,8 +231,8 @@ class qSOFACalculatorV2:
         score += components['altered_mental_status']
         
         # 2. Systolic BP <= 100 mmHg (1 point)
-        sbp = vitals.get('systolic_bp', 120)
-        components['low_bp'] = 1 if sbp <= 100 else 0
+        sbp = vitals.get('systolic_bp')
+        components['low_bp'] = 1 if (sbp is not None and sbp == sbp and sbp <= 100) else 0
         score += components['low_bp']
         
         # 3. Respiratory rate >= 22 breaths/min (1 point)
