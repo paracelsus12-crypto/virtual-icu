@@ -644,7 +644,7 @@ with tab3:
         with col4:
             st.metric("🌬️ RR", f"{vitals['respiratory_rate']:.0f} /min" if vitals.get('respiratory_rate') is not None else 'nan /min')
         with col5:
-            st.metric("🌡️ Temp", f"{vitals['temperature']:.1f}°C")
+            st.metric("🌡️ Temp", f"{vitals['temperature']:.1f}°C" if vitals.get('temperature') is not None else 'nan°C')
         
         st.markdown("---")
         
