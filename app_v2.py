@@ -636,13 +636,13 @@ with tab3:
         
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.metric("❤️ HR", f"{vitals['heart_rate']:.0f} bpm")
+            st.metric("❤️ HR", f"{vitals['heart_rate']:.0f} bpm" if vitals.get('heart_rate') is not None else 'nan bpm')
         with col2:
             st.metric("🫁 SpO2", f"{vitals['spo2']:.1f}%")
         with col3:
             st.metric("📉 SBP", f"{vitals['systolic_bp']:.0f} mmHg" if vitals.get('systolic_bp') is not None else "nan mmHg")
         with col4:
-            st.metric("🌬️ RR", f"{vitals['respiratory_rate']:.0f} /min")
+            st.metric("🌬️ RR", f"{vitals['respiratory_rate']:.0f} /min" if vitals.get('respiratory_rate') is not None else 'nan /min')
         with col5:
             st.metric("🌡️ Temp", f"{vitals['temperature']:.1f}°C")
         
