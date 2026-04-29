@@ -638,7 +638,7 @@ with tab3:
         with col1:
             st.metric("❤️ HR", f"{vitals['heart_rate']:.0f} bpm" if vitals.get('heart_rate') is not None else 'nan bpm')
         with col2:
-            st.metric("🫁 SpO2", f"{vitals['spo2']:.1f}%")
+            st.metric("🫁 SpO2", f"{vitals['spo2']:.1f}%" if vitals.get('spo2') is not None else 'nan%')
         with col3:
             st.metric("📉 SBP", f"{vitals['systolic_bp']:.0f} mmHg" if vitals.get('systolic_bp') is not None else "nan mmHg")
         with col4:
