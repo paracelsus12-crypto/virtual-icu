@@ -616,6 +616,15 @@ with tab3:
         if 'age' not in vitals or pd.isna(vitals['age']):
             vitals['age'] = 65
         
+        # Sanitize vitals - replace all NaN with None before scoring
+        def sanitize(v):
+            if v is None: return None
+            try:
+                f = float(v)
+                return None if math.isnan(f) else f
+            except (TypeError, ValueError):
+                return v
+        vitals = {k: sanitize(v) for k, v in vitals.items()}
         # Calculate scores using v2 calculators
         news2 = NEWS2CalculatorV2.calculate(vitals)
         qsofa = qSOFACalculatorV2.calculate(vitals)
