@@ -593,6 +593,61 @@ with tab2:
             st.plotly_chart(fig_spo2, use_container_width=True)
 
 # ════════════════════════════════════════════════════════════════════
+
+def render_oxygenation_module(data, record_idx):
+    import streamlit as st
+    import plotly.graph_objects as go
+    vitals = data.iloc[record_idx].to_dict()
+    pao2 = vitals.get('pao2')
+    fio2 = vitals.get('fio2')
+    peep = vitals.get('peep')
+    oi_end = vitals.get('oxygenation_index_end_op')
+    oi_ext = vitals.get('oxygenation_index_pre_extubation')
+    ards = vitals.get('ards_class', 'N/A')
+    def safe(v):
+        try: return float(v) if v is not None and str(v) not in ['nan','None',''] else None
+        except: return None
+    pao2=safe(pao2); fio2=safe(fio2); peep=safe(peep)
+    oi_end=safe(oi_end); oi_ext=safe(oi_ext)
+    oi = round(pao2/fio2) if pao2 and fio2 else None
+    def classify(v):
+        if v is None: return 'No data', 'gray'
+        if v > 300: return 'Normal (>300)', 'green'
+        elif v > 200: return 'Mild ARDS (200-300)', 'yellow'
+        elif v > 100: return 'Moderate ARDS (100-200)', 'orange'
+        else: return 'Severe ARDS (<100)', 'red'
+    st.subheader('Oxygenation Index (Berlin Criteria)')
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric('paO2 (mmHg)', f'{pao2:.0f}' if pao2 else 'nan')
+        st.metric('FiO2', f'{fio2:.2f}' if fio2 else 'nan')
+        st.metric('PEEP (cmH2O)', f'{peep:.0f}' if peep else 'nan')
+    with col2:
+        display = oi or oi_end
+        if display:
+            label, _ = classify(display)
+            st.metric('OI (paO2/FiO2)', f'{display:.0f}')
+            st.info(f'Status: {label}')
+        if oi_end: st.metric('OI end of surgery', f'{oi_end:.0f}')
+        if oi_ext: st.metric('OI pre-extubation', f'{oi_ext:.0f}')
+    with col3:
+        st.metric('Clinical ARDS', str(ards))
+        display_oi = oi or oi_end
+        if display_oi:
+            fig = go.Figure(go.Indicator(
+                mode='gauge+number', value=display_oi,
+                title={'text': 'Oxygenation Index'},
+                gauge={'axis':{'range':[0,500]},
+                    'bar':{'color':'darkblue'},
+                    'steps':[
+                        {'range':[0,100],'color':'red'},
+                        {'range':[100,200],'color':'orange'},
+                        {'range':[200,300],'color':'yellow'},
+                        {'range':[300,500],'color':'lightgreen'}],
+                    'threshold':{'line':{'color':'black','width':4},'thickness':0.75,'value':300}}))
+            fig.update_layout(height=250)
+            st.plotly_chart(fig, use_container_width=True)
+
 # TAB 3: CLINICAL SCORES
 # ════════════════════════════════════════════════════════════════════
 
@@ -630,6 +685,11 @@ with tab3:
         qsofa = qSOFACalculatorV2.calculate(vitals)
         cart = CARTCalculatorV2.calculate(vitals)
         recommendations = ClinicalRecommendationsEngineV2.generate(news2, qsofa, cart)
+        # Oxygenation Index Module
+        if any(c in data.columns for c in ['pao2','oxygenation_index_end_op']):
+            st.divider()
+            render_oxygenation_module(data, record_idx)
+
         
         # Display current vitals
         st.subheader("📊 Current Vital Signs")
@@ -648,6 +708,7 @@ with tab3:
         
         st.markdown("---")
         
+
         # NEWS2 Score
         st.subheader("📊 NEWS2 Score (National Early Warning Score 2)")
         
