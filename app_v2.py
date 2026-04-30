@@ -1378,17 +1378,17 @@ with tab_mort:
     
     with col1:
         st.subheader("Patient Parameters")
-        age = st.number_input("Age (years)", 18, 100, 65)
-        female = st.checkbox("Female sex")
-        urgent = st.checkbox("Urgent intervention")
-        mi_cause = st.checkbox("MI as AHF cause")
-        biventr = st.checkbox("Biventricular failure")
+        age = st.number_input("Age (years)", 18, 100, 65, key="mort_age")
+        female = st.checkbox("Female sex", key="mort_female")
+        urgent = st.checkbox("Urgent intervention", key="mort_urgent")
+        mi_cause = st.checkbox("MI as AHF cause", key="mort_mi")
+        biventr = st.checkbox("Biventricular failure", key="mort_biventr")
         
         st.subheader("Interventions")
-        has_iabp = st.checkbox("IABP used")
-        has_ecmo = st.checkbox("VA-ECMO used")
-        reoperation = st.checkbox("Reoperation performed")
-        vent_24h = st.checkbox("Ventilation >24 hours")
+        has_iabp = st.checkbox("IABP used", key="mort_iabp")
+        has_ecmo = st.checkbox("VA-ECMO used", key="mort_ecmo")
+        reoperation = st.checkbox("Reoperation performed", key="mort_reop")
+        vent_24h = st.checkbox("Ventilation >24 hours", key="mort_vent")
     
     with col2:
         st.subheader("Predicted Mortality")
