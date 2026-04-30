@@ -446,7 +446,7 @@ if uploaded_file is not None:
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf, tab_iabp = st.tabs([
     "📊 Dashboard",
     "📈 Vital Signs",
     "🔢 Clinical Scores",
@@ -454,7 +454,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf = st.tabs([
     "🔮 Forecast (NEW)",
     "📋 Report (NEW)",
     "🫀 EUROScore II",
-    "🫀 AHF Profiles"
+    "🫀 AHF Profiles",
+    "🫉 IABP / VA-ECMO"
 ])
 
 # ════════════════════════════════════════════════════════════════════
@@ -1209,3 +1210,143 @@ with tab_ahf:
         st.warning("**Step 2: Impella**\nRefractory shock\nCI <1.8 L/min/m²\nHigh-risk PCI")
     with col5:
         st.error("**Step 3: VA-ECMO**\nRefractory cardiogenic shock\nCardiac arrest\nBridge to transplant")
+
+# ============================================================
+# TAB: IABP vs VA-ECMO DECISION TOOL
+# ============================================================
+with tab_iabp:
+    st.title("Mechanical Circulatory Support Decision Tool")
+    st.markdown("*IABP vs VA-ECMO selection algorithm based on ESC/ELSO guidelines*")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Haemodynamic Parameters")
+        map_val = st.number_input("Mean Arterial Pressure (mmHg)", 20, 120, 55)
+        ci = st.number_input("Cardiac Index (L/min/m²)", 0.5, 5.0, 1.6, step=0.1)
+        pcwp = st.number_input("PCWP (mmHg)", 5, 40, 22)
+        lactate = st.number_input("Lactate (mmol/L)", 0.0, 20.0, 3.5, step=0.1)
+        na_dose = st.number_input("Noradrenaline dose (mcg/kg/min)", 0.0, 2.0, 0.2, step=0.05)
+        dobu_dose = st.number_input("Dobutamine dose (mcg/kg/min)", 0.0, 20.0, 5.0, step=0.5)
+        
+        st.subheader("Clinical Context")
+        rhythm = st.selectbox("Cardiac rhythm", ["Sinus", "AF", "VT/VF", "Paced"])
+        aortic_regurg = st.checkbox("Aortic regurgitation (IABP contraindication)")
+        aortic_disease = st.checkbox("Aortic disease / dissection (IABP contraindication)")
+        peripheral_disease = st.checkbox("Severe peripheral arterial disease")
+        cardiac_arrest = st.checkbox("Recent cardiac arrest / CPR")
+        post_cardiac_surgery = st.checkbox("Post cardiac surgery")
+    
+    with col2:
+        st.subheader("Decision Algorithm")
+        
+        # Score for IABP appropriateness
+        iabp_score = 0
+        ecmo_score = 0
+        
+        # MAP criteria
+        if map_val < 65: 
+            iabp_score += 2
+            ecmo_score += 1
+        if map_val < 50:
+            ecmo_score += 2
+            
+        # CI criteria
+        if ci < 2.2:
+            iabp_score += 2
+        if ci < 1.8:
+            ecmo_score += 2
+        if ci < 1.4:
+            ecmo_score += 2
+            
+        # Lactate
+        if lactate > 2:
+            iabp_score += 1
+            ecmo_score += 1
+        if lactate > 4:
+            ecmo_score += 2
+        if lactate > 8:
+            ecmo_score += 2
+            
+        # Vasopressors
+        if na_dose > 0.1:
+            iabp_score += 1
+            ecmo_score += 1
+        if na_dose > 0.5:
+            ecmo_score += 2
+            
+        # Clinical context
+        if cardiac_arrest:
+            ecmo_score += 4
+        if post_cardiac_surgery:
+            iabp_score += 1
+            
+        # Contraindications
+        if aortic_regurg or aortic_disease:
+            iabp_score = -99
+        if peripheral_disease:
+            ecmo_score -= 1
+            
+        # Recommendation
+        if iabp_score == -99:
+            st.error("IABP CONTRAINDICATED")
+            st.info("Consider VA-ECMO or Impella")
+            recommendation = "VA-ECMO"
+        elif ecmo_score >= 8 or cardiac_arrest:
+            st.error("VA-ECMO INDICATED")
+            st.markdown("Refractory cardiogenic shock — escalate immediately")
+            recommendation = "VA-ECMO"
+        elif ecmo_score >= 5:
+            st.warning("Consider VA-ECMO")
+            st.markdown("High-risk — IABP as bridge, prepare ECMO team")
+            recommendation = "IABP → VA-ECMO"
+        elif iabp_score >= 3:
+            st.warning("IABP INDICATED")
+            st.markdown("Moderate shock — IABP + inotropes")
+            recommendation = "IABP"
+        else:
+            st.success("Medical therapy first")
+            st.markdown("Optimise inotropes before mechanical support")
+            recommendation = "Medical"
+        
+        st.divider()
+        
+        # IABP contraindications summary
+        st.subheader("IABP Contraindications Check")
+        contra = []
+        if aortic_regurg: contra.append("Aortic regurgitation")
+        if aortic_disease: contra.append("Aortic disease/dissection")
+        if rhythm == "VT/VF": contra.append("VT/VF rhythm instability")
+        
+        if contra:
+            for c in contra:
+                st.error(f"CONTRAINDICATION: {c}")
+        else:
+            st.success("No absolute contraindications to IABP")
+        
+        st.divider()
+        st.subheader("Your AHF Dataset Statistics")
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            st.metric("IABP used", "7 pts", "57% mortality")
+        with col_b:
+            st.metric("VA-ECMO used", "3 pts", "67% mortality")
+        with col_c:
+            st.metric("No MCS", "36 pts", "53% mortality")
+        
+        st.caption("Data from your AHF_Nov dataset (45 patients, single centre)")
+    
+    st.divider()
+    st.subheader("IABP Technical Parameters")
+    col3, col4 = st.columns(2)
+    with col3:
+        st.markdown("**Insertion:** Femoral artery, 7-8F sheath")
+        st.markdown("**Balloon size:** 30-50cc (based on patient height)")
+        st.markdown("**Timing:** ECG-triggered or pressure-triggered")
+        st.markdown("**Augmentation ratio:** Start 1:1, wean to 1:2, 1:3")
+    with col4:
+        st.markdown("**Haemodynamic effects:**")
+        st.markdown("▸ Afterload reduction: SBP ↓ 10-20 mmHg")
+        st.markdown("▸ Diastolic augmentation: DBP ↑ 20-30 mmHg")
+        st.markdown("▸ Cardiac output ↑ 0.5-1.0 L/min")
+        st.markdown("▸ Coronary perfusion ↑ (diastolic filling)")
