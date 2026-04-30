@@ -1084,7 +1084,7 @@ with tab_euro:
             mode="gauge+number",
             value=mortality,
             number={"suffix": "%"},
-            title={"text": "EUROScore II", "AHF Profiles"},
+            title={"text": "EUROScore II"},
             gauge={
                 "axis": {"range": [0, 30]},
                 "bar": {"color": "darkred"},
