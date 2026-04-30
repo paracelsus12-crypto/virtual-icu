@@ -453,7 +453,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf = st.tabs([
     "🎮 Invigilator Panel",
     "🔮 Forecast (NEW)",
     "📋 Report (NEW)",
-    "🫀 EUROScore II"
+    "🫀 EUROScore II",
+    "🫀 AHF Profiles"
 ])
 
 # ════════════════════════════════════════════════════════════════════
