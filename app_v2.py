@@ -446,18 +446,36 @@ if uploaded_file is not None:
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf, tab_iabp, tab_mort = st.tabs([
-    "📊 Dashboard",
-    "📈 Vital Signs",
-    "🔢 Clinical Scores",
-    "🎮 Invigilator Panel",
-    "🔮 Forecast (NEW)",
-    "📋 Report (NEW)",
-    "🫀 EUROScore II",
-    "🫀 AHF Profiles",
-    "🫉 IABP / VA-ECMO",
-    "📊 Mortality Predictor"
+# # Level 1 navigation
+main_section = st.tabs([
+    "📊 Monitoring",
+    "🏥 Cardiac Surgery",
+    "🔬 Clinical Tools"
 ])
+tab_monitor, tab_cardiac, tab_tools = main_section
+
+with tab_monitor:
+    tab1, tab2, tab4, tab5, tab6 = st.tabs([
+        "📊 Dashboard",
+        "📈 Vital Signs",
+        "🎮 Invigilator Panel",
+        "🔮 Forecast (NEW)",
+        "📋 Report (NEW)"
+    ])
+
+with tab_cardiac:
+    tab_euro, tab_ahf, tab_iabp, tab_mort = st.tabs([
+        "🫀 EUROScore II",
+        "🫀 AHF Profiles",
+        "💉 IABP / VA-ECMO",
+        "📊 Mortality Predictor"
+    ])
+
+with tab_tools:
+    tab3, tab_sofa = st.tabs([
+        "🔢 Clinical Scores",
+        "🧬 SOFA Score"
+    ])
 
 # ════════════════════════════════════════════════════════════════════
 # TAB 1: DASHBOARD
