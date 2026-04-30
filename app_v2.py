@@ -446,7 +446,7 @@ if uploaded_file is not None:
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab_euro = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf = st.tabs([
     "📊 Dashboard",
     "📈 Vital Signs",
     "🔢 Clinical Scores",
@@ -1084,7 +1084,7 @@ with tab_euro:
             mode="gauge+number",
             value=mortality,
             number={"suffix": "%"},
-            title={"text": "EUROScore II"},
+            title={"text": "EUROScore II", "AHF Profiles"},
             gauge={
                 "axis": {"range": [0, 30]},
                 "bar": {"color": "darkred"},
@@ -1100,3 +1100,111 @@ with tab_euro:
         st.plotly_chart(fig, use_container_width=True)
         
         st.caption("EUROScore II: Nashef et al. Eur Heart J 2012;33:2427-2435")
+
+# ============================================================
+# TAB: AHF PROFILES (ESC 2021)
+# ============================================================
+with tab_ahf:
+    st.title("Acute Heart Failure - ESC Profiles")
+    st.markdown("*ESC Guidelines 2021 - Haemodynamic profiles and treatment algorithm*")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Haemodynamic Profile")
+        st.markdown("Select the patient profile based on perfusion and congestion status:")
+        
+        profile = st.radio(
+            "Patient Profile",
+            ["Warm-Wet (Decompensated HF)", 
+             "Cold-Wet (Cardiogenic Shock)",
+             "Cold-Dry (Hypovolaemia)",
+             "Warm-Dry (Compensated)"],
+            index=0
+        )
+        
+        st.divider()
+        st.subheader("Clinical Assessment")
+        sbp = st.number_input("Systolic BP (mmHg)", 40, 250, 110)
+        hr = st.number_input("Heart Rate (bpm)", 20, 200, 90)
+        spo2 = st.number_input("SpO2 (%)", 50, 100, 94)
+        lactate = st.number_input("Lactate (mmol/L)", 0.0, 20.0, 2.0, step=0.1)
+        urine = st.number_input("Urine output (ml/kg/h)", 0.0, 5.0, 0.5, step=0.1)
+        
+    with col2:
+        st.subheader("Profile Details")
+        
+        profiles = {
+            "Warm-Wet (Decompensated HF)": {
+                "signs": ["Dyspnoea at rest", "Oedema", "SpO2 <94%", "PCWP >18 mmHg", "Normal or high BP"],
+                "treatment": ["IV Furosemide", "Nitrates (if SBP >110)", "Monitor diuresis", "CPAP if SpO2<90%"],
+                "mortality": "10-20%",
+                "color": "warning"
+            },
+            "Cold-Wet (Cardiogenic Shock)": {
+                "signs": ["SBP <90 mmHg", "Cold extremities", "Oliguria <0.5 ml/kg/h", "Lactate >2 mmol/L", "PCWP >18 mmHg"],
+                "treatment": ["Dobutamine + Noradrenaline", "IABP or VA-ECMO", "Careful diuretics", "CO/CI monitoring"],
+                "mortality": "40-60%",
+                "color": "error"
+            },
+            "Cold-Dry (Hypovolaemia)": {
+                "signs": ["Low BP", "Tachycardia", "CVP <5 mmHg", "PCWP <12 mmHg", "Dry mucous membranes"],
+                "treatment": ["Fluid challenge 250ml bolus", "Assess fluid responsiveness", "Exclude tamponade", "Stop diuretics"],
+                "mortality": "15-25%",
+                "color": "warning"
+            },
+            "Warm-Dry (Compensated)": {
+                "signs": ["Normal BP", "Good perfusion", "Normal diuresis", "SpO2 >95%", "No congestion"],
+                "treatment": ["Optimise oral therapy", "Prepare for transfer", "Monitor LVEF", "Rehabilitation"],
+                "mortality": "<5%",
+                "color": "success"
+            }
+        }
+        
+        p = profiles[profile]
+        
+        if p["color"] == "error":
+            st.error(f"Mortality risk: {p['mortality']}")
+        elif p["color"] == "warning":
+            st.warning(f"Mortality risk: {p['mortality']}")
+        else:
+            st.success(f"Mortality risk: {p['mortality']}")
+        
+        st.markdown("**Clinical signs:**")
+        for sign in p["signs"]:
+            st.markdown(f"▸ {sign}")
+        
+        st.markdown("**Treatment:**")
+        for t in p["treatment"]:
+            st.markdown(f"✓ {t}")
+        
+        st.divider()
+        st.subheader("Shock Severity")
+        
+        shock_score = 0
+        if sbp < 90: shock_score += 2
+        elif sbp < 100: shock_score += 1
+        if lactate > 4: shock_score += 2
+        elif lactate > 2: shock_score += 1
+        if urine < 0.3: shock_score += 2
+        elif urine < 0.5: shock_score += 1
+        if hr > 120: shock_score += 1
+        if spo2 < 90: shock_score += 1
+        
+        if shock_score >= 5:
+            st.error(f"Shock Score: {shock_score}/8 — CRITICAL. Consider IABP/VA-ECMO")
+        elif shock_score >= 3:
+            st.warning(f"Shock Score: {shock_score}/8 — HIGH. Inotropes required")
+        else:
+            st.success(f"Shock Score: {shock_score}/8 — LOW-MODERATE")
+        
+    st.divider()
+    st.subheader("Mechanical Circulatory Support Algorithm")
+    
+    col3, col4, col5 = st.columns(3)
+    with col3:
+        st.info("**Step 1: IABP**\nMAP <65 + inotropes\nCI <2.2 L/min/m²\nBridge to recovery/LVAD")
+    with col4:
+        st.warning("**Step 2: Impella**\nRefractory shock\nCI <1.8 L/min/m²\nHigh-risk PCI")
+    with col5:
+        st.error("**Step 3: VA-ECMO**\nRefractory cardiogenic shock\nCardiac arrest\nBridge to transplant")
