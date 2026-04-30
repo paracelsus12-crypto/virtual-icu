@@ -1049,7 +1049,20 @@ with tab_euro:
         st.subheader("Patient Characteristics")
         age = st.number_input("Age (years)", 18, 100, 65)
         female = st.checkbox("Female")
-        cc = st.number_input("Creatinine clearance (ml/min)", 1, 200, 85)
+        st.markdown("**Кліренс креатиніну (мл/хв)**")
+        cc_method = st.radio("Спосіб введення", ["Вручну (мл/хв)", "Розрахувати з креатиніну"], horizontal=True, key="euro_cc_method")
+        if cc_method == "Розрахувати з креатиніну":
+            cr_unit = st.radio("Одиниці креатиніну", ["мкмоль/л", "mg/dL"], horizontal=True, key="euro_cr_unit")
+            if cr_unit == "мкмоль/л":
+                cr_val = st.number_input("Креатинін (мкмоль/л)", 40, 1200, 88, key="euro_cr_si")
+                cr_mgdl = cr_val / 88.4
+            else:
+                cr_mgdl = st.number_input("Creatinine (mg/dL)", 0.3, 15.0, 1.0, step=0.1, key="euro_cr_us")
+            cc_calc = round((140 - age) * (70 if not female else 60) / (72 * cr_mgdl))
+            st.info(f"Кліренс за Cockroft-Gault: **{cc_calc} мл/хв**")
+            cc = cc_calc
+        else:
+            cc = st.number_input("Creatinine clearance (ml/min)", 1, 200, 85, key="euro_cc_manual")
         ef = st.slider("LV Ejection Fraction (%)", 1, 80, 50)
         nyha = st.selectbox("NYHA Class", [1, 2, 3, 4], index=1)
         pasp = st.number_input("Pulmonary artery systolic pressure (mmHg)", 10, 120, 25)
@@ -1478,6 +1491,12 @@ with tab_mort:
 with tab_sofa:
     st.title("SOFA Score")
     st.markdown("*Sequential Organ Failure Assessment - Vincent et al. 1996*")
+    
+    unit_system = st.radio("Одиниці вимірювання", 
+        ["mg/dL (США)", "мкмоль/л (Україна/Європа)"], 
+        horizontal=True, key="sofa_units")
+    use_si = unit_system == "мкмоль/л (Україна/Європа)"
+    
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Organ Systems")
@@ -1487,7 +1506,12 @@ with tab_sofa:
         st.markdown("**2. Coagulation (Platelets)**")
         platelets = st.number_input("Platelets (x1000/uL)", 0, 800, 150, key="sofa_plt")
         st.markdown("**3. Liver (Bilirubin)**")
-        bilirubin = st.number_input("Bilirubin (mg/dL)", 0.0, 20.0, 1.0, step=0.1, key="sofa_bili")
+        if use_si:
+            bilirubin_raw = st.number_input("Білірубін (мкмоль/л)", 0.0, 350.0, 17.0, step=1.0, key="sofa_bili")
+            bilirubin = bilirubin_raw / 17.1
+        else:
+            bilirubin = st.number_input("Bilirubin (mg/dL)", 0.0, 20.0, 1.0, step=0.1, key="sofa_bili")
+            bilirubin_raw = bilirubin * 17.1
         st.markdown("**4. Cardiovascular**")
         cv_option = st.selectbox("Cardiovascular status", [
             "MAP >= 70 mmHg (0 pts)",
@@ -1499,7 +1523,12 @@ with tab_sofa:
         st.markdown("**5. CNS (GCS)**")
         gcs = st.slider("Glasgow Coma Scale", 3, 15, 15, key="sofa_gcs")
         st.markdown("**6. Renal**")
-        creatinine = st.number_input("Creatinine (mg/dL)", 0.0, 15.0, 1.0, step=0.1, key="sofa_cr")
+        if use_si:
+            creatinine_raw = st.number_input("Креатинін (мкмоль/л)", 0.0, 1300.0, 88.0, step=1.0, key="sofa_cr")
+            creatinine = creatinine_raw / 88.4
+        else:
+            creatinine = st.number_input("Creatinine (mg/dL)", 0.0, 15.0, 1.0, step=0.1, key="sofa_cr")
+            creatinine_raw = creatinine * 88.4
         urine_out = st.number_input("Urine output (mL/day)", 0, 3000, 1000, key="sofa_uo")
     with col2:
         st.subheader("SOFA Score Result")
@@ -1545,10 +1574,10 @@ with tab_sofa:
         for organ, score, detail in [
             ("Respiration", resp_score, f"PaO2/FiO2={pf_ratio}"),
             ("Coagulation", coag_score, f"Plt={platelets}"),
-            ("Liver", liver_score, f"Bili={bilirubin}"),
+            ("Liver", liver_score, f"Bili={bilirubin:.2f} mg/dL ({bilirubin_raw:.0f} мкмоль/л)"),
             ("Cardiovascular", cv_score, "MAP/Vasopressors"),
             ("CNS", cns_score, f"GCS={gcs}"),
-            ("Renal", renal_score, f"Cr={creatinine}"),
+            ("Renal", renal_score, f"Cr={creatinine:.2f} mg/dL ({creatinine_raw:.0f} мкмоль/л)"),
         ]:
             bar = "X" * score + "." * (4 - score)
             st.markdown(f"{bar} **{organ}** {score}/4 - {detail}")
