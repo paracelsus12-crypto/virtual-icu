@@ -170,8 +170,10 @@ class NEWS2CalculatorV2:
             components['systolic_bp'] = 3
         
         # 5. Heart Rate (0-3)
-        hr = vitals.get('heart_rate', 70)
-        if hr <= 40:
+        hr = vitals.get('heart_rate')
+        if hr is None or hr != hr:
+            components['heart_rate'] = 0  # Missing = skip
+        elif hr <= 40:
             components['heart_rate'] = 3
         elif 41 <= hr <= 50:
             components['heart_rate'] = 1
@@ -180,7 +182,7 @@ class NEWS2CalculatorV2:
         elif 91 <= hr <= 110:
             components['heart_rate'] = 1
         elif 111 <= hr <= 130:
-            components['heart_rate'] = 2
+            components['heart_rate'] = 1
         else:
             components['heart_rate'] = 3
         
