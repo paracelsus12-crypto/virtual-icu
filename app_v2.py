@@ -446,7 +446,7 @@ if uploaded_file is not None:
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf, tab_iabp = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf, tab_iabp, tab_mort = st.tabs([
     "📊 Dashboard",
     "📈 Vital Signs",
     "🔢 Clinical Scores",
@@ -455,7 +455,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_euro, tab_ahf, tab_iabp = st.tabs([
     "📋 Report (NEW)",
     "🫀 EUROScore II",
     "🫀 AHF Profiles",
-    "🫉 IABP / VA-ECMO"
+    "🫉 IABP / VA-ECMO",
+    "📊 Mortality Predictor"
 ])
 
 # ════════════════════════════════════════════════════════════════════
@@ -1350,3 +1351,104 @@ with tab_iabp:
         st.markdown("▸ Diastolic augmentation: DBP ↑ 20-30 mmHg")
         st.markdown("▸ Cardiac output ↑ 0.5-1.0 L/min")
         st.markdown("▸ Coronary perfusion ↑ (diastolic filling)")
+
+# ============================================================
+# TAB: MORTALITY PREDICTOR
+# ============================================================
+with tab_mort:
+    st.title("AHF Mortality Predictor")
+    st.markdown("*Logistic regression model trained on your AHF_Nov dataset (45 patients, AUC=0.840)*")
+    
+    import math
+    
+    def predict_mortality(age, female, urgent, has_iabp, has_ecmo,
+                          reoperation, mi_cause, biventr, vent_24h):
+        means = [62.96, 0.311, 0.533, 0.156, 0.067, 0.467, 0.400, 0.044, 0.333]
+        stds  = [13.51, 0.463, 0.499, 0.362, 0.249, 0.499, 0.490, 0.206, 0.471]
+        coefs = [0.9615, 0.2999, 0.8933, -0.1680, -0.1129, -0.4515, 0.8696, -0.4949, 0.6001]
+        intercept = 0.2477
+        vals = [age, female, urgent, has_iabp, has_ecmo, reoperation, mi_cause, biventr, vent_24h]
+        log_odds = intercept
+        for v, m, s, c in zip(vals, means, stds, coefs):
+            log_odds += ((v - m) / s) * c
+        prob = math.exp(log_odds) / (1 + math.exp(log_odds))
+        return round(prob * 100, 1)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Patient Parameters")
+        age = st.number_input("Age (years)", 18, 100, 65)
+        female = st.checkbox("Female sex")
+        urgent = st.checkbox("Urgent intervention")
+        mi_cause = st.checkbox("MI as AHF cause")
+        biventr = st.checkbox("Biventricular failure")
+        
+        st.subheader("Interventions")
+        has_iabp = st.checkbox("IABP used")
+        has_ecmo = st.checkbox("VA-ECMO used")
+        reoperation = st.checkbox("Reoperation performed")
+        vent_24h = st.checkbox("Ventilation >24 hours")
+    
+    with col2:
+        st.subheader("Predicted Mortality")
+        
+        mort = predict_mortality(
+            age, int(female), int(urgent), int(has_iabp),
+            int(has_ecmo), int(reoperation), int(mi_cause),
+            int(biventr), int(vent_24h)
+        )
+        
+        if mort >= 70:
+            st.error(f"Predicted mortality: {mort}%")
+            risk_label = "VERY HIGH RISK"
+        elif mort >= 50:
+            st.error(f"Predicted mortality: {mort}%")
+            risk_label = "HIGH RISK"
+        elif mort >= 30:
+            st.warning(f"Predicted mortality: {mort}%")
+            risk_label = "MODERATE RISK"
+        else:
+            st.success(f"Predicted mortality: {mort}%")
+            risk_label = "LOW RISK"
+        
+        st.metric("Risk Category", risk_label)
+        st.metric("Model AUC", "0.840", "Trained on 45 pts")
+        
+        import plotly.graph_objects as go
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=mort,
+            number={"suffix": "%"},
+            title={"text": "Mortality Risk"},
+            gauge={
+                "axis": {"range": [0, 100]},
+                "bar": {"color": "darkred"},
+                "steps": [
+                    {"range": [0, 30], "color": "lightgreen"},
+                    {"range": [30, 50], "color": "yellow"},
+                    {"range": [50, 70], "color": "orange"},
+                    {"range": [70, 100], "color": "salmon"},
+                ],
+                "threshold": {"line": {"color": "red", "width": 4}, "thickness": 0.75, "value": 53}
+            }
+        ))
+        fig.update_layout(height=300)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.caption("Dashed line = dataset mortality rate (53%)")
+    
+    st.divider()
+    st.subheader("Feature Importance (Odds Ratios)")
+    
+    features_data = {
+        "Feature": ["Age", "Urgent intervention", "MI cause", "Ventilation >24h", 
+                    "Female sex", "VA-ECMO", "IABP", "Reoperation", "Biventricular failure"],
+        "Odds Ratio": [2.62, 2.44, 2.39, 1.82, 1.35, 0.89, 0.85, 0.64, 0.61],
+        "Direction": ["Risk", "Risk", "Risk", "Risk", "Risk", "Protective", "Protective", "Protective", "Protective"]
+    }
+    
+    import pandas as pd
+    df_feat = pd.DataFrame(features_data)
+    st.dataframe(df_feat, use_container_width=True, hide_index=True)
+    st.caption("Model: Logistic Regression | Data: AHF_Nov (45 patients) | Cross-val AUC: 0.840 ± 0.159")
