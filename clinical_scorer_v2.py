@@ -237,7 +237,7 @@ class qSOFACalculatorV2:
         
         # 3. Respiratory rate >= 22 breaths/min (1 point)
         rr = vitals.get('respiratory_rate', 14)
-        components['high_rr'] = 1 if rr >= 22 else 0
+        components['high_rr'] = 1 if (rr is not None and rr == rr and rr >= 22) else 0
         score += components['high_rr']
         
         needs_investigation = score >= 2
