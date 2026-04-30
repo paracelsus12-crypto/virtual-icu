@@ -1470,3 +1470,90 @@ with tab_mort:
     df_feat = pd.DataFrame(features_data)
     st.dataframe(df_feat, use_container_width=True, hide_index=True)
     st.caption("Model: Logistic Regression | Data: AHF_Nov (45 patients) | Cross-val AUC: 0.840 ± 0.159")
+
+# ============================================================
+# TAB: SOFA SCORE
+# ============================================================
+with tab_sofa:
+    st.title("SOFA Score")
+    st.markdown("*Sequential Organ Failure Assessment - Vincent et al. 1996*")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Organ Systems")
+        st.markdown("**1. Respiration (PaO2/FiO2)**")
+        pf_ratio = st.number_input("PaO2/FiO2 ratio (mmHg)", 0, 600, 300, key="sofa_pf")
+        on_vent = st.checkbox("On mechanical ventilation", key="sofa_vent")
+        st.markdown("**2. Coagulation (Platelets)**")
+        platelets = st.number_input("Platelets (x1000/uL)", 0, 800, 150, key="sofa_plt")
+        st.markdown("**3. Liver (Bilirubin)**")
+        bilirubin = st.number_input("Bilirubin (mg/dL)", 0.0, 20.0, 1.0, step=0.1, key="sofa_bili")
+        st.markdown("**4. Cardiovascular**")
+        cv_option = st.selectbox("Cardiovascular status", [
+            "MAP >= 70 mmHg (0 pts)",
+            "MAP < 70 mmHg (1 pt)",
+            "Dopamine <=5 or Dobutamine any (2 pts)",
+            "Dopamine 5-15 or Epi/Norepi <=0.1 (3 pts)",
+            "Dopamine >15 or Epi/Norepi >0.1 (4 pts)"
+        ], key="sofa_cv")
+        st.markdown("**5. CNS (GCS)**")
+        gcs = st.slider("Glasgow Coma Scale", 3, 15, 15, key="sofa_gcs")
+        st.markdown("**6. Renal**")
+        creatinine = st.number_input("Creatinine (mg/dL)", 0.0, 15.0, 1.0, step=0.1, key="sofa_cr")
+        urine_out = st.number_input("Urine output (mL/day)", 0, 3000, 1000, key="sofa_uo")
+    with col2:
+        st.subheader("SOFA Score Result")
+        if pf_ratio >= 400: resp_score = 0
+        elif pf_ratio >= 300: resp_score = 1
+        elif pf_ratio >= 200 and on_vent: resp_score = 3
+        elif pf_ratio >= 200: resp_score = 2
+        elif pf_ratio >= 100 and on_vent: resp_score = 4
+        else: resp_score = 3
+        if platelets >= 150: coag_score = 0
+        elif platelets >= 100: coag_score = 1
+        elif platelets >= 50: coag_score = 2
+        elif platelets >= 20: coag_score = 3
+        else: coag_score = 4
+        if bilirubin < 1.2: liver_score = 0
+        elif bilirubin < 2.0: liver_score = 1
+        elif bilirubin < 6.0: liver_score = 2
+        elif bilirubin < 12.0: liver_score = 3
+        else: liver_score = 4
+        cv_list = ["MAP >= 70 mmHg (0 pts)","MAP < 70 mmHg (1 pt)","Dopamine <=5 or Dobutamine any (2 pts)","Dopamine 5-15 or Epi/Norepi <=0.1 (3 pts)","Dopamine >15 or Epi/Norepi >0.1 (4 pts)"]
+        cv_score = cv_list.index(cv_option)
+        if gcs >= 15: cns_score = 0
+        elif gcs >= 13: cns_score = 1
+        elif gcs >= 10: cns_score = 2
+        elif gcs >= 6: cns_score = 3
+        else: cns_score = 4
+        if creatinine < 1.2 and urine_out >= 500: renal_score = 0
+        elif creatinine < 2.0: renal_score = 1
+        elif creatinine < 3.5: renal_score = 2
+        elif creatinine < 5.0 or urine_out < 500: renal_score = 3
+        else: renal_score = 4
+        total_sofa = resp_score + coag_score + liver_score + cv_score + cns_score + renal_score
+        if total_sofa <= 3: mort_range = "<10%"
+        elif total_sofa <= 5: mort_range = "10-20%"
+        elif total_sofa <= 8: mort_range = "20-30%"
+        elif total_sofa <= 11: mort_range = "40-50%"
+        else: mort_range = ">80%"
+        if total_sofa >= 11: st.error(f"SOFA Score: {total_sofa}/24")
+        elif total_sofa >= 7: st.warning(f"SOFA Score: {total_sofa}/24")
+        else: st.success(f"SOFA Score: {total_sofa}/24")
+        st.metric("Predicted mortality", mort_range)
+        st.markdown("**Component breakdown:**")
+        for organ, score, detail in [
+            ("Respiration", resp_score, f"PaO2/FiO2={pf_ratio}"),
+            ("Coagulation", coag_score, f"Plt={platelets}"),
+            ("Liver", liver_score, f"Bili={bilirubin}"),
+            ("Cardiovascular", cv_score, "MAP/Vasopressors"),
+            ("CNS", cns_score, f"GCS={gcs}"),
+            ("Renal", renal_score, f"Cr={creatinine}"),
+        ]:
+            bar = "X" * score + "." * (4 - score)
+            st.markdown(f"{bar} **{organ}** {score}/4 - {detail}")
+        st.divider()
+        if total_sofa >= 2: st.error("Sepsis criteria met (SOFA >=2 above baseline)")
+        if total_sofa >= 11: st.error("Severe organ dysfunction")
+        elif total_sofa >= 7: st.warning("Significant organ dysfunction - intensify monitoring")
+        else: st.success("Mild-moderate dysfunction - standard ICU care")
+        st.caption("SOFA: Vincent JL et al. Intensive Care Med 1996;22:707-710")
