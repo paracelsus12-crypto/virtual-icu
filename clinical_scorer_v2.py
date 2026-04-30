@@ -118,7 +118,9 @@ class NEWS2CalculatorV2:
         else:
             thresholds = cls.SLO2_THRESHOLDS_SCALE1
         
-        if spo2 <= int(thresholds['critical'][1]):
+        if spo2 is None or spo2 != spo2:
+            components['spo2'] = 0  # Missing = skip
+        elif spo2 <= int(thresholds['critical'][1]):
             components['spo2'] = 3
         elif spo2 <= int(thresholds['abnormal'][1]):
             components['spo2'] = 2
