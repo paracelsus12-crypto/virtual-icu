@@ -472,9 +472,10 @@ with tab_cardiac:
     ])
 
 with tab_tools:
-    tab3, tab_sofa = st.tabs([
+    tab3, tab_sofa, tab_vent = st.tabs([
         "🔢 Clinical Scores",
-        "🧬 SOFA Score"
+        "🧬 SOFA Score",
+        "🌬 Ventilator Weaning"
     ])
 
 # ════════════════════════════════════════════════════════════════════
@@ -1557,3 +1558,168 @@ with tab_sofa:
         elif total_sofa >= 7: st.warning("Significant organ dysfunction - intensify monitoring")
         else: st.success("Mild-moderate dysfunction - standard ICU care")
         st.caption("SOFA: Vincent JL et al. Intensive Care Med 1996;22:707-710")
+
+# ============================================================
+# TAB: VENTILATOR WEANING
+# ============================================================
+with tab_vent:
+    st.title("Ventilator Weaning — Готовність до екстубації")
+    st.markdown("*Оцінка готовності пацієнта до відключення від апарату ШВЛ*")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Параметри дихання")
+        
+        with st.expander("1. RSBI — Індекс поверхневого дихання", expanded=True):
+            st.info("**Що це?** Відношення частоти дихання до дихального об'єму. Відображає наскільки дрібно і часто дихає пацієнт. Чим вище — тим гірше.")
+            st.markdown("**Як виміряти:** Відключити підтримку апарату на 1 хвилину і виміряти ЧД та Vt на дисплеї ШВЛ")
+            rr_rsbi = st.number_input("Частота дихання (ЧД, вдихів/хв)", 0, 60, 18, key="vent_rr")
+            vt_rsbi = st.number_input("Дихальний об'єм (Vt, мл)", 0, 1000, 400, key="vent_vt")
+            if vt_rsbi > 0:
+                rsbi = round(rr_rsbi / (vt_rsbi / 1000), 1)
+                if rsbi < 80:
+                    st.success(f"RSBI = {rsbi} — Відмінний результат (норма <105)")
+                elif rsbi < 105:
+                    st.success(f"RSBI = {rsbi} — Прийнятний (норма <105)")
+                else:
+                    st.error(f"RSBI = {rsbi} — Занадто високий! (норма <105)")
+        
+        with st.expander("2. P0.1 — Оклюзійний тиск", expanded=True):
+            st.info("**Що це?** Тиск який розвиває пацієнт за перші 0.1 секунди вдиху при закритому клапані. Відображає зусилля дихального центру мозку. Висока P0.1 = мозок надто старається — значить дихання важке.")
+            st.markdown("**Як виміряти:** Є в меню більшості сучасних ШВЛ (Drager, Hamilton, Maquet). Режим P0.1 або Occlusion Pressure")
+            p01 = st.number_input("P0.1 (cmH2O)", 0.0, 20.0, 2.0, step=0.1, key="vent_p01")
+            if p01 < 4:
+                st.success(f"P0.1 = {p01} cmH2O — Норма (мета <4)")
+            elif p01 < 6:
+                st.warning(f"P0.1 = {p01} cmH2O — Прийнятно (норма <6)")
+            else:
+                st.error(f"P0.1 = {p01} cmH2O — Висока! Дихальний центр перевантажений")
+        
+        with st.expander("3. MIP/NIF — Сила дихальних м'язів", expanded=True):
+            st.info("**Що це?** Максимальний від'ємний тиск який може створити пацієнт при вдиху. Вимірює силу міжреберних м'язів і діафрагми. Чим більший від'ємний тиск — тим сильніші м'язи.")
+            st.markdown("**Як виміряти:** Підключити манометр до інтубаційної трубки або використати функцію NIF/MIP на ШВЛ. Попросити пацієнта зробити максимальний вдих")
+            mip = st.number_input("MIP/NIF (cmH2O, від'ємне значення)", -80, 0, -25, key="vent_mip")
+            if mip <= -30:
+                st.success(f"MIP = {mip} cmH2O — Відмінна сила м'язів (норма <-20)")
+            elif mip <= -20:
+                st.success(f"MIP = {mip} cmH2O — Прийнятно (норма <-20)")
+            else:
+                st.error(f"MIP = {mip} cmH2O — М'язи слабкі! Ризик дихальної недостатності")
+        
+        with st.expander("4. SBT — Проба з самостійним диханням", expanded=True):
+            st.info("**Що це?** Тест протягом 30-120 хвилин під час якого пацієнт дихає самостійно з мінімальною підтримкою ШВЛ або через T-подібну трубку. Якщо витримав — готовий до екстубації.")
+            sbt_passed = st.radio("Результат SBT (30-120 хв)", 
+                ["Не проводився", "Успішний — пацієнт стабільний", "Невдалий — тахіпное/десатурація/збудження"],
+                key="vent_sbt")
+        
+        with st.expander("5. Оксигенація та інші критерії"):
+            st.markdown("**SpO2 та FiO2**")
+            spo2_vent = st.number_input("SpO2 (%)", 50, 100, 96, key="vent_spo2")
+            fio2_vent = st.number_input("FiO2 (частки, 0.21-1.0)", 0.21, 1.0, 0.4, step=0.01, key="vent_fio2")
+            peep_vent = st.number_input("ПТКВ/PEEP (cmH2O)", 0, 20, 5, key="vent_peep")
+            gcs_vent = st.slider("GCS (свідомість)", 3, 15, 12, key="vent_gcs")
+            cough = st.checkbox("Ефективний кашель", key="vent_cough")
+            secretions = st.checkbox("Мінімальна кількість секрету", key="vent_secret")
+    
+    with col2:
+        st.subheader("Висновок")
+        
+        score = 0
+        issues = []
+        positives = []
+        
+        # RSBI
+        if vt_rsbi > 0:
+            rsbi_val = rr_rsbi / (vt_rsbi / 1000)
+            if rsbi_val < 105:
+                score += 2
+                positives.append(f"RSBI={rsbi_val:.0f} (норма)")
+            else:
+                issues.append(f"RSBI={rsbi_val:.0f} (занадто високий)")
+        
+        # P0.1
+        if p01 < 6:
+            score += 2
+            positives.append(f"P0.1={p01} cmH2O (норма)")
+        else:
+            issues.append(f"P0.1={p01} cmH2O (висока)")
+        
+        # MIP
+        if mip <= -20:
+            score += 2
+            positives.append(f"MIP={mip} cmH2O (норма)")
+        else:
+            issues.append(f"MIP={mip} cmH2O (слабкі м'язи)")
+        
+        # SBT
+        if "Успішний" in sbt_passed:
+            score += 3
+            positives.append("SBT успішний")
+        elif "Не проводився" in sbt_passed:
+            issues.append("SBT не проводився")
+        else:
+            issues.append("SBT невдалий")
+        
+        # Oxygenation
+        if spo2_vent >= 95 and fio2_vent <= 0.4 and peep_vent <= 8:
+            score += 2
+            positives.append(f"Оксигенація прийнятна (SpO2={spo2_vent}%, FiO2={fio2_vent})")
+        else:
+            issues.append(f"Оксигенація недостатня (SpO2={spo2_vent}%, FiO2={fio2_vent}, PEEP={peep_vent})")
+        
+        # Consciousness
+        if gcs_vent >= 10:
+            score += 1
+            positives.append(f"Свідомість достатня (GCS={gcs_vent})")
+        else:
+            issues.append(f"Порушення свідомості (GCS={gcs_vent})")
+        
+        # Cough
+        if cough:
+            score += 1
+            positives.append("Ефективний кашель")
+        else:
+            issues.append("Відсутній ефективний кашель")
+        
+        if secretions:
+            score += 1
+            positives.append("Мінімальна секреція")
+        else:
+            issues.append("Надмірна секреція — ризик аспірації")
+        
+        max_score = 14
+        pct = round(score / max_score * 100)
+        
+        if score >= 11:
+            st.success(f"ГОТОВИЙ до екстубації ({score}/{max_score} балів)")
+            st.markdown("Рекомендація: **Екстубувати**")
+        elif score >= 7:
+            st.warning(f"МОЖЛИВО готовий ({score}/{max_score} балів)")
+            st.markdown("Рекомендація: **Провести SBT якщо не проводився, повторна оцінка через 2-4 год**")
+        else:
+            st.error(f"НЕ ГОТОВИЙ до екстубації ({score}/{max_score} балів)")
+            st.markdown("Рекомендація: **Продовжити ШВЛ, усунути причини**")
+        
+        if positives:
+            st.markdown("**Позитивні критерії:**")
+            for p in positives:
+                st.markdown(f"✓ {p}")
+        
+        if issues:
+            st.markdown("**Проблеми:**")
+            for i in issues:
+                st.markdown(f"✗ {i}")
+        
+        st.divider()
+        st.subheader("Критерії ЗУПИНКИ SBT")
+        st.error("""
+Негайно повернути на ШВЛ якщо:
+- SpO2 < 90% або PaO2 < 60 mmHg
+- ЧД > 35/хв протягом > 5 хв
+- АТ > 180/90 або < 90/60 mmHg  
+- ЧСС > 140/хв або зміна > 20%
+- Збудження, пітливість, тривога
+- Порушення свідомості
+        """)
+        st.caption("На основі: MacIntyre NR et al. Chest 2001 | Boles JM et al. ERJ 2007")
