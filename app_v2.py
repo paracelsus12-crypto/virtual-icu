@@ -446,13 +446,14 @@ if uploaded_file is not None:
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_euro = st.tabs([
     "📊 Dashboard",
     "📈 Vital Signs",
     "🔢 Clinical Scores",
     "🎮 Invigilator Panel",
     "🔮 Forecast (NEW)",
-    "📋 Report (NEW)"
+    "📋 Report (NEW)",
+    "🫀 EUROScore II"
 ])
 
 # ════════════════════════════════════════════════════════════════════
@@ -971,3 +972,131 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
+# ============================================================
+# TAB: EUROSCORE II CALCULATOR
+# ============================================================
+with tab_euro:
+    st.title("EUROScore II Calculator")
+    st.markdown("*Nashef et al. Eur Heart J 2012 - Predicted operative mortality for cardiac surgery*")
+    
+    import math
+    
+    def calc_euroscore2(p):
+        lo = -5.324537
+        age = p.get('age', 60)
+        if age > 60: lo += 0.0285181 * (age - 60)
+        if p.get('female'): lo += 0.2196434
+        cc = p.get('creatinine_clearance', 85)
+        if cc < 50: lo += 0.987207
+        elif cc < 85: lo += 0.303553
+        if p.get('extracardiac_arteriopathy'): lo += 0.5360268
+        if p.get('poor_mobility'): lo += 0.2296615
+        if p.get('previous_cardiac_surgery'): lo += 1.118599
+        if p.get('chronic_lung_disease'): lo += 0.1886564
+        if p.get('active_endocarditis'): lo += 0.6194522
+        if p.get('critical_preop'): lo += 1.086517
+        if p.get('diabetes_insulin'): lo += 0.3542749
+        nyha = p.get('nyha', 1)
+        if nyha == 2: lo += 0.1070545
+        elif nyha == 3: lo += 0.2958358
+        elif nyha == 4: lo += 0.5597929
+        if p.get('ccs4_angina'): lo += 0.2226147
+        ef = p.get('ef', 50)
+        if ef < 21: lo += 0.9346919
+        elif ef < 31: lo += 0.8084096
+        elif ef < 51: lo += 0.3150652
+        if p.get('recent_mi'): lo += 0.1528943
+        pasp = p.get('pasp', 25)
+        if pasp >= 55: lo += 0.5181810
+        elif pasp >= 31: lo += 0.1788899
+        urg = p.get('urgency', 'elective')
+        if urg == 'urgent': lo += 0.3174673
+        elif urg == 'emergency': lo += 0.7039121
+        elif urg == 'salvage': lo += 1.362947
+        proc = p.get('procedure', 'isolated_cabg')
+        if proc == 'single_non_cabg': lo += 0.0062118
+        elif proc == 'two_procedures': lo += 0.5521478
+        elif proc == 'three_procedures': lo += 0.9724533
+        if p.get('thoracic_aorta'): lo += 0.6527205
+        return round(math.exp(lo) / (1 + math.exp(lo)) * 100, 2)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Patient Characteristics")
+        age = st.number_input("Age (years)", 18, 100, 65)
+        female = st.checkbox("Female")
+        cc = st.number_input("Creatinine clearance (ml/min)", 1, 200, 85)
+        ef = st.slider("LV Ejection Fraction (%)", 1, 80, 50)
+        nyha = st.selectbox("NYHA Class", [1, 2, 3, 4], index=1)
+        pasp = st.number_input("Pulmonary artery systolic pressure (mmHg)", 10, 120, 25)
+        
+        st.subheader("Risk Factors")
+        extracardiac = st.checkbox("Extracardiac arteriopathy")
+        poor_mobility = st.checkbox("Poor mobility")
+        prev_surgery = st.checkbox("Previous cardiac surgery")
+        lung_disease = st.checkbox("Chronic lung disease")
+        endocarditis = st.checkbox("Active endocarditis")
+        critical = st.checkbox("Critical preoperative state")
+        diabetes = st.checkbox("Diabetes on insulin")
+        ccs4 = st.checkbox("CCS Class 4 angina")
+        recent_mi = st.checkbox("Recent MI (<90 days)")
+        thoracic = st.checkbox("Surgery on thoracic aorta")
+    
+    with col2:
+        st.subheader("Procedure")
+        urgency = st.selectbox("Urgency", 
+            ["elective", "urgent", "emergency", "salvage"],
+            format_func=lambda x: {"elective":"Elective","urgent":"Urgent","emergency":"Emergency","salvage":"Salvage"}[x])
+        procedure = st.selectbox("Weight of procedure",
+            ["isolated_cabg", "single_non_cabg", "two_procedures", "three_procedures"],
+            format_func=lambda x: {"isolated_cabg":"Isolated CABG","single_non_cabg":"Single non-CABG","two_procedures":"Two procedures","three_procedures":"Three or more procedures"}[x])
+        
+        params = {
+            'age': age, 'female': female, 'creatinine_clearance': cc,
+            'ef': ef, 'nyha': nyha, 'pasp': pasp,
+            'extracardiac_arteriopathy': extracardiac, 'poor_mobility': poor_mobility,
+            'previous_cardiac_surgery': prev_surgery, 'chronic_lung_disease': lung_disease,
+            'active_endocarditis': endocarditis, 'critical_preop': critical,
+            'diabetes_insulin': diabetes, 'ccs4_angina': ccs4, 'recent_mi': recent_mi,
+            'thoracic_aorta': thoracic, 'urgency': urgency, 'procedure': procedure
+        }
+        
+        mortality = calc_euroscore2(params)
+        
+        st.subheader("Result")
+        if mortality < 2:
+            risk_label = "Low Risk"
+            color = "success"
+        elif mortality < 5:
+            risk_label = "Intermediate Risk"
+            color = "warning"
+        else:
+            risk_label = "High Risk"
+            color = "error"
+        
+        st.metric("Predicted Mortality", f"{mortality}%")
+        getattr(st, color)(f"{risk_label}")
+        
+        import plotly.graph_objects as go
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=mortality,
+            number={"suffix": "%"},
+            title={"text": "EUROScore II"},
+            gauge={
+                "axis": {"range": [0, 30]},
+                "bar": {"color": "darkred"},
+                "steps": [
+                    {"range": [0, 2], "color": "lightgreen"},
+                    {"range": [2, 5], "color": "yellow"},
+                    {"range": [5, 30], "color": "salmon"},
+                ],
+                "threshold": {"line": {"color": "red", "width": 4}, "thickness": 0.75, "value": 5}
+            }
+        ))
+        fig.update_layout(height=300)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.caption("EUROScore II: Nashef et al. Eur Heart J 2012;33:2427-2435")
