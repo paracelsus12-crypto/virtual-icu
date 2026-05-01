@@ -472,10 +472,11 @@ with tab_cardiac:
     ])
 
 with tab_tools:
-    tab3, tab_sofa, tab_vent = st.tabs([
+    tab3, tab_sofa, tab_vent, tab_reexp = st.tabs([
         "🔢 Clinical Scores",
         "🧬 SOFA Score",
-        "🌬 Ventilator Weaning"
+        "🌬 Ventilator Weaning",
+        "🩸 Re-Exploration"
     ])
 
 # ════════════════════════════════════════════════════════════════════
@@ -1752,3 +1753,157 @@ with tab_vent:
 - Порушення свідомості
         """)
         st.caption("На основі: MacIntyre NR et al. Chest 2001 | Boles JM et al. ERJ 2007")
+
+# ============================================================
+# TAB: RE-EXPLORATION FOR BLEEDING / TAMPONADE
+# ============================================================
+with tab_reexp:
+    st.title("Re-Exploration after Cardiac Surgery")
+    st.markdown("*Показання до реексплорації після операцій на серці — Canadyova et al. ICVTS 2012*")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Критерії Kirklin & Barratt-Boyes")
+        st.markdown("*Кількість крові через дренажі від моменту закриття грудної клітки*")
+        
+        drain_1h = st.number_input("Дренаж за 1 годину (мл)", 0, 3000, 0, step=10, key="reexp_1h")
+        drain_2h = st.number_input("Дренаж за 2 годину (мл)", 0, 3000, 0, step=10, key="reexp_2h")
+        drain_3h = st.number_input("Дренаж за 3 годину (мл)", 0, 3000, 0, step=10, key="reexp_3h")
+        drain_4h = st.number_input("Дренаж за 4 годину (мл)", 0, 3000, 0, step=10, key="reexp_4h")
+        drain_5h = st.number_input("Дренаж за 5 годину (мл)", 0, 3000, 0, step=10, key="reexp_5h")
+        
+        total_4h = drain_1h + drain_2h + drain_3h + drain_4h
+        total_5h = total_4h + drain_5h
+        
+        st.divider()
+        st.subheader("Клінічні ознаки тампонади")
+        st.info("Тампонада = тріада Бека: підвищення ЦВТ + падіння АТ + тахікардія")
+        
+        cvp_rise = st.checkbox("Підвищення ЦВТ (Central Venous Pressure)", key="reexp_cvp")
+        bp_fall = st.checkbox("Падіння артеріального тиску", key="reexp_bp")
+        tachycardia = st.checkbox("Тахікардія", key="reexp_tachy")
+        increased_inotropes = st.checkbox("Збільшення потреби в інотропах", key="reexp_inot")
+        echo_tamponade = st.checkbox("ЕхоКГ: ознаки тампонади (колапс правих камер)", key="reexp_echo")
+        
+        st.divider()
+        st.subheader("Інші показання")
+        sudden_massive = st.checkbox("Раптова масивна кровотеча", key="reexp_massive")
+        rebleed = st.checkbox("Відновлення кровотечі після зупинки (хірургічна причина)", key="reexp_rebleed")
+        
+        st.divider()
+        st.subheader("Лабораторні показники перед реексплорацією")
+        lactate = st.number_input("Лактат (ммоль/л)", 0.0, 20.0, 2.0, step=0.1, key="reexp_lactate")
+        hematocrit = st.number_input("Гематокрит (%)", 0, 60, 28, key="reexp_hct")
+        time_to_reexp = st.number_input("Час від операції до реексплорації (хв)", 0, 3000, 300, step=30, key="reexp_time")
+    
+    with col2:
+        st.subheader("Рішення про реексплорацію")
+        
+        # Check Kirklin & Barratt-Boyes criteria
+        kb_criteria = []
+        kb_met = False
+        
+        if drain_1h > 500:
+            kb_criteria.append(f"ПЕРЕВИЩЕНО: >500 мл за 1 год ({drain_1h} мл)")
+            kb_met = True
+        if drain_2h > 400:
+            kb_criteria.append(f"ПЕРЕВИЩЕНО: >400 мл за 2 год ({drain_2h} мл)")
+            kb_met = True
+        if drain_3h > 300:
+            kb_criteria.append(f"ПЕРЕВИЩЕНО: >300 мл за 3 год ({drain_3h} мл)")
+            kb_met = True
+        if total_4h > 1000:
+            kb_criteria.append(f"ПЕРЕВИЩЕНО: >1000 мл за 4 год ({total_4h} мл)")
+            kb_met = True
+        if total_5h > 1200:
+            kb_criteria.append(f"ПЕРЕВИЩЕНО: >1200 мл за 5 год ({total_5h} мл)")
+            kb_met = True
+        if sudden_massive:
+            kb_criteria.append("Раптова масивна кровотеча")
+            kb_met = True
+        if rebleed:
+            kb_criteria.append("Відновлення кровотечі")
+            kb_met = True
+        
+        # Check tamponade criteria
+        tamponade_signs = sum([cvp_rise, bp_fall, tachycardia, increased_inotropes, echo_tamponade])
+        tamponade_suspected = tamponade_signs >= 2
+        
+        # Overall decision
+        reexp_indicated = kb_met or tamponade_suspected
+        
+        if reexp_indicated:
+            st.error("РЕЕКСПЛОРАЦІЯ ПОКАЗАНА")
+            
+            # Urgency
+            if sudden_massive or (tamponade_signs >= 3 and echo_tamponade):
+                st.error("ТЕРМІНОВО — виконати в ВІТ (гемодинамічна нестабільність)")
+                urgency = "EMERGENCY — в ВІТ"
+            else:
+                st.warning("УРГЕНТНО — транспортувати в операційну")
+                urgency = "URGENT — в операційну"
+        else:
+            st.success("Показань до реексплорації немає")
+            st.markdown("Продовжити консервативне лікування і моніторинг")
+        
+        st.divider()
+        
+        # Kirklin-Boyes criteria status
+        st.subheader("Критерії кровотечі (Kirklin & Barratt-Boyes)")
+        if kb_criteria:
+            for c in kb_criteria:
+                st.error(f"✗ {c}")
+        else:
+            st.success("✓ Критерії кровотечі не перевищені")
+            st.markdown(f"Поточний дренаж: {total_4h} мл за 4 год | {total_5h} мл за 5 год")
+        
+        # Tamponade status
+        st.subheader("Ознаки тампонади")
+        if tamponade_signs >= 3:
+            st.error(f"Тампонада ВІРОГІДНА ({tamponade_signs}/5 ознак)")
+        elif tamponade_signs >= 2:
+            st.warning(f"Тампонада ПІДОЗРЮЄТЬСЯ ({tamponade_signs}/5 ознак)")
+        else:
+            st.success(f"Тампонада малоймовірна ({tamponade_signs}/5 ознак)")
+        
+        st.divider()
+        
+        # Mortality risk based on timing and labs
+        st.subheader("Ризик летальності")
+        mort_factors = []
+        if time_to_reexp > 780:
+            mort_factors.append(f"Затримка реексплорації >780 хв ({time_to_reexp} хв) — летальність ↑↑")
+        elif time_to_reexp > 300:
+            mort_factors.append(f"Затримка реексплорації >300 хв ({time_to_reexp} хв) — летальність ↑")
+        if lactate > 6.65:
+            mort_factors.append(f"Лактат критично високий ({lactate} ммоль/л) — летальність ↑↑")
+        elif lactate > 2.68:
+            mort_factors.append(f"Лактат підвищений ({lactate} ммоль/л)")
+        if hematocrit < 24.7:
+            mort_factors.append(f"Гематокрит критично низький ({hematocrit}%) — летальність ↑↑")
+        elif hematocrit < 27.2:
+            mort_factors.append(f"Гематокрит знижений ({hematocrit}%)")
+        
+        if len(mort_factors) >= 2:
+            st.error("ВИСОКИЙ ризик летальності")
+            for f in mort_factors:
+                st.markdown(f"▸ {f}")
+        elif len(mort_factors) == 1:
+            st.warning("ПОМІРНИЙ ризик летальності")
+            for f in mort_factors:
+                st.markdown(f"▸ {f}")
+        else:
+            st.success("Несприятливих прогностичних факторів немає")
+        
+        st.divider()
+        st.subheader("Статистика (Canadyova et al., 2012)")
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            st.metric("Частота реексплорацій", "3.4%", "від усіх операцій")
+        with col_b:
+            st.metric("Летальність", "37.5%", "після реексплорації")
+        with col_c:
+            st.metric("Реексплорація <4 год", "41%", "вижили")
+        
+        st.caption("Джерело: Canadyova J et al. ICVTS 2012;14:704-708 | Biancari F et al. EJCTS 2012;41:50-55")
