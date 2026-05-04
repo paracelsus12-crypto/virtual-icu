@@ -442,6 +442,37 @@ if uploaded_file is not None:
     except Exception as e:
         st.sidebar.error(f"❌ Error loading CSV: {str(e)}")
 
+
+if 'disclaimer_accepted' not in st.session_state:
+    st.session_state.disclaimer_accepted = False
+
+if not st.session_state.disclaimer_accepted:
+    st.warning("УВАГА: Тільки для освітніх цілей")
+    st.markdown("""
+    ### Virtual ICU Monitor v2 — Освітній симулятор
+    
+    Дана програма є **симулятором для навчання**.
+    
+    Дані, отримані за допомогою програми, **не можуть бути підставою** для:
+    - Встановлення діагнозу реальним пацієнтам
+    - Призначення лікування реальним пацієнтам
+    - Прийняття клінічних рішень без верифікації
+    
+    Використання будь-якої інформації з цього додатка у реальній медичній практиці 
+    здійснюється на **власний розсуд та під особисту відповідальність лікаря**.
+    
+    **Автор не несе відповідальності за клінічні наслідки.**
+    """)
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
+    with col_btn1:
+        if st.button("Я згоден", type="primary", use_container_width=True):
+            st.session_state.disclaimer_accepted = True
+            st.rerun()
+    with col_btn2:
+        if st.button("Вийти", use_container_width=True):
+            st.error("Для використання програми необхідно прийняти умови.")
+    st.stop()
+
 # ════════════════════════════════════════════════════════════════════
 # MAIN CONTENT - TABS
 # ════════════════════════════════════════════════════════════════════
